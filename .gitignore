@@ -1,0 +1,24 @@
+# Kept off GitHub (written by prepare_github.py)
+gemini_key.txt
+__pycache__/
+prepare_github.py
+Prepare for GitHub.bat
+Start over.bat
+*.new/
+# notes for the coding assistant, not part of the site
+CLAUDE.md
+# old copies of the papers under the reverted name, not used by the site
+monographs/gaias-organon-*
+# older NASA gallery picture sets (the site only uses the newest)
+eic/co/20261112082341/
+eic/fires/20261111114251/
+eic/nox/20261112083024/
+eic/o3/20261112083618/
+eic/pm25/20261112081703/
+eic/q2m/20261111113630/
+eic/rain/20261113044411/
+eic/rainvar/20261111114053/
+eic/sst/20261111154645/
+eic/t2m/20261112081043/
+eic/wind/20261111112855/
+eic/wind/20261113093033.new/
