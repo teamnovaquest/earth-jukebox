@@ -1,0 +1,101 @@
+# Earth Jukebox: bring in NASA's newest Earth Information Center (EIC) frames every 6 hours
+# and publish the website. The new frames go only into the published site, never into the
+# repository, so the repository does not grow. If NASA cannot be reached, or a download is
+# incomplete, the site is published with the frames already saved in the repository.
+name: Update NASA EIC frames and publish site
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Pillow and ffmpeg
+        run: |
+          pip install pillow imageio-ffmpeg
+          ffmpeg -version | head -1 || echo "system ffmpeg not found; imageio-ffmpeg will be used"
+
+      - name: Download the newest frames from NASA's Earth Information Center
+        continue-on-error: true
+        timeout-minutes: 75
+        run: python get_eic_frames.py
+
+      - name: Check every frame is present and keep only the newest set
+        run: |
+          python - <<'EOF'
+          import json, os, shutil, subprocess
+
+          def needed():
+              m = json.load(open("eic/manifest.json", encoding="utf-8"))
+              files, current = [], {}
+              for d in m.get("datasets", []):
+                  current[d["key"]] = d.get("version")
+                  files.append(d.get("colorbar"))
+                  for f in d.get("frames", []):
+                      files += [f.get("img"), f.get("s")]
+              return [f for f in files if f], current
+
+          try:
+              files, current = needed()
+              missing = [f for f in files if not os.path.isfile(f)]
+          except Exception as e:
+              missing = ["manifest unreadable: " + str(e)]
+          if missing:
+              print("Incomplete download (" + str(len(missing)) + " missing, e.g. " + missing[0] + "): publishing the frames saved in the repository instead.")
+              subprocess.run(["git", "checkout", "--", "eic"], check=True)
+              subprocess.run(["git", "clean", "-fdq", "eic"], check=True)
+              files, current = needed()
+              missing = [f for f in files if not os.path.isfile(f)]
+              if missing:
+                  raise SystemExit("Saved frames are incomplete too: " + missing[0])
+
+          removed = 0
+          for key in os.listdir("eic"):
+              base = os.path.join("eic", key)
+              if not os.path.isdir(base):
+                  continue
+              for ver in os.listdir(base):
+                  p = os.path.join(base, ver)
+                  if os.path.isdir(p) and ver != current.get(key):
+                      shutil.rmtree(p)
+                      removed += 1
+          m = json.load(open("eic/manifest.json", encoding="utf-8"))
+          print("OK:", len(files), "frame files present; manifest generated", m.get("generated"), "; older sets removed:", removed)
+          EOF
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
