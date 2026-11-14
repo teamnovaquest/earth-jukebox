@@ -5,6 +5,7 @@ Team NovaQuest used AI tools while building Earth Jukebox. This file lists where
 ## AI tools used to build the project
 - **Claude (Anthropic):** helped design and write the website's code and data handling, debug it, and draft texts, including the papers, guides, descriptions and the spoken-guide translations.
 - **ElevenLabs:** AI voice for the narration in our videos.
+-  **Google Gemini (Nano Banana 2):** generated our team logo.
 
 ## AI built into the website
 - **Google Gemini (Gemini API):** powers the SI assistant, Analytics, the Compare overview and the optional research essay (with Google Search grounding). Gemini-written text is marked as such on the site and in reports.
